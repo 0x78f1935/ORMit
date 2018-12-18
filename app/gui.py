@@ -76,7 +76,7 @@ class ORMit(QMainWindow, GUI, VersionCheck):
         try:
             data = open(name[0], 'r')
             with data:
-                text = data.read()
+                text = data.read().encode('latin1').decode('cp1251')
                 self.textEdit.setText(str(text))
         except FileNotFoundError as e:
             self.textBrowser.setText(str(e))
@@ -106,23 +106,27 @@ class ORMit(QMainWindow, GUI, VersionCheck):
     
     def convert_sql(self):
         text = []
-        if ';' in text:
-            text = str(text).split(';')
+        s = ' '.join(str(self.textEdit.toPlainText()).split('\n'))
+        if ';' in s:
+            text = s.split(';')
         else:
-            text.append(str(self.textEdit.toPlainText()))
+            text.append(s)
+
+        text = [i for i in text if i != '']
 
         results = []
-        if text:
-            for query in text:      
-                try:
-                    q = str(CONVERT.to_sqla(query))
-                    result = str(self.lineEdit.text()) + " = " + q
-                except IndexError:
-                    result = "Please insert a SQL query first!"
-                except Exception as e:
-                    result = str(e.args[0])
+        for query in text:      
+            try:
+                q = str(CONVERT.to_sqla(query))
+                result = str(self.lineEdit.text()) + " = " + q
+            except IndexError:
+                result = "Please insert a SQL query first!"
+            except Exception as e:
+                if e.args: result = "ERROR {} ON QUERY: {}".format(query, str(e.args[0]))
+                else: result = "UNEXPECTED ERROR {} ON QUERY: {}".format(e, query)
+            finally:
                 results.append(result)
-        self.textBrowser.setText('\n'.join(results))
+        self.textBrowser.setText('\n\n'.join(results))
 
     def copy_results(self):
         text = str(self.textBrowser.toPlainText())
